@@ -1,0 +1,29 @@
+{
+  "name": "danhunsaker/flysystem-redis",
+  "description": "A Flysystem adapter for storing files in Redis",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Daniel Hunsaker",
+      "email": "danhunsaker@gmail.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Danhunsaker\\Flysystem\\Redis\\": "src"
+    }
+  },
+  "require": {
+    "php": ">=5.4.0",
+    "league/flysystem": "^1.0",
+    "predis/predis": "^1.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^4.5"
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-master": "0.0-dev"
+    }
+  }
+}
