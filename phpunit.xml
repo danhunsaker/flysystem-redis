@@ -18,7 +18,7 @@
 	</filter>
 
 	<testsuites>
-		<testsuite name="Package Test Suite">
+		<testsuite name="Flysystem-Redis Test Suite">
 			<directory suffix=".php">tests</directory>
 		</testsuite>
 	</testsuites>
