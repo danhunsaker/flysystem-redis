@@ -9,6 +9,9 @@ php:
   - 5.6
   - hhvm
 
+services:
+  - redis-server
+
 env:
   matrix:
     - PREFER_LOWEST="--prefer-lowest"
