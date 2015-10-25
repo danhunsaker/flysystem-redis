@@ -39,6 +39,11 @@ class RedisAdapter extends AbstractAdapter
     {
         $info = $this->getPathInfo($path);
         
+        if ( ! mb_check_encoding($contents, 'UTF-8'))
+        {
+            $contents = mb_convert_encoding($contents, 'UTF-8');
+        }
+        
         if ($this->ensurePathExists($info['dirname'], $config))
         {
             $fileData = [

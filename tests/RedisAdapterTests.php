@@ -32,8 +32,17 @@ class RedisAdapterTests extends \PHPUnit_Framework_TestCase
      */
     public function testWrite()
     {
+        $utf_8_test = file_get_contents(__DIR__ . '/utf-8-test.txt');
+        $quickbrown = file_get_contents(__DIR__ . '/quickbrown.txt');
+        
         $result = $this->adapter->write('new_file.txt', 'new contents', new Config());
         $this->assertSame('new contents', $result['contents']);
+        $result = $this->adapter->write('utf-8-test.txt', $utf_8_test, new Config());
+        $this->assertSame($utf_8_test, mb_convert_encoding($result['contents'], mb_internal_encoding(), 'UTF-8'));
+        $this->assertSame($utf_8_test, mb_convert_encoding($this->adapter->read('utf-8-test.txt')['contents'], mb_internal_encoding(), 'UTF-8'));
+        $result = $this->adapter->write('quickbrown.txt', $quickbrown, new Config());
+        $this->assertSame($quickbrown, $result['contents']);
+        $this->assertSame($quickbrown, $this->adapter->read('quickbrown.txt')['contents']);
         $this->assertFalse($this->adapter->write('file.txt/new_file.txt', 'contents', new Config()));
     }
 
