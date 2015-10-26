@@ -39,23 +39,19 @@ class RedisAdapter extends AbstractAdapter
     {
         $info = $this->getPathInfo($path);
         
-        if ( ! mb_check_encoding($contents, 'UTF-8'))
-        {
-            $contents = mb_convert_encoding($contents, 'UTF-8');
-        }
-        
         if ($this->ensurePathExists($info['dirname'], $config))
         {
             $fileData = [
                 'path' => $info['path'],
                 'type' => 'file',
-                'contents' => $contents,
+                'contents' => base64_encode($contents),
                 'visibility' => $config->get('visibility', 'public'),
                 'timestamp' => time(),
             ];
             
             if (in_array($this->redis->hset($this->applyPathPrefix($info['dirname']), $info['basename'], json_encode($fileData)), [0, 1]))
             {
+                $fileData['contents'] = $contents;
                 return $fileData;
             }
             else
@@ -110,6 +106,7 @@ class RedisAdapter extends AbstractAdapter
         
         if ($data['type'] === 'file')
         {
+            $data['contents'] = base64_decode($data['contents']);
             $data['size'] = Util::contentSize($data['contents']);
             
             return $data;
@@ -136,6 +133,7 @@ class RedisAdapter extends AbstractAdapter
         
         if ($metadata['type'] === 'file')
         {
+            $metadata['contents'] = base64_decode($metadata['contents']);
             $metadata += [
                 'size' => Util::contentSize($metadata['contents']),
                 'mimetype' => Util::guessMimeType($metadata['path'], $metadata['contents']),
@@ -205,8 +203,7 @@ class RedisAdapter extends AbstractAdapter
      */
     public function copy($path, $newpath)
     {
-        $data = $this->read($path);
-        return $this->write($newpath, $data['contents'], new Config()) !== FALSE;
+        return $this->write($newpath, $this->read($path)['contents'], new Config()) !== FALSE;
     }
 
     /**
@@ -267,7 +264,10 @@ class RedisAdapter extends AbstractAdapter
         
         if ($this->has($info['path']) && $this->getMetadata($info['path'])['type'] === 'dir')
         {
-            foreach ($this->redis->hgetall($this->applyPathPrefix($info['path'])) as $name => $data)
+            $files = $this->redis->hgetall($this->applyPathPrefix($info['path']));
+            ksort($files);
+            
+            foreach ($files as $name => $data)
             {
                 if ($name === '.')
                 {

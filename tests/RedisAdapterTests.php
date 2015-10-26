@@ -32,18 +32,32 @@ class RedisAdapterTests extends \PHPUnit_Framework_TestCase
      */
     public function testWrite()
     {
-        $utf_8_test = file_get_contents(__DIR__ . '/utf-8-test.txt');
         $quickbrown = file_get_contents(__DIR__ . '/quickbrown.txt');
+        $utf_8_test = file_get_contents(__DIR__ . '/utf-8-test.txt');
+        $binary_test = file_get_contents(__DIR__ . '/binary-test');
         
+        // Test file creation
         $result = $this->adapter->write('new_file.txt', 'new contents', new Config());
         $this->assertSame('new contents', $result['contents']);
-        $result = $this->adapter->write('utf-8-test.txt', $utf_8_test, new Config());
-        $this->assertSame($utf_8_test, mb_convert_encoding($result['contents'], mb_internal_encoding(), 'UTF-8'));
-        $this->assertSame($utf_8_test, mb_convert_encoding($this->adapter->read('utf-8-test.txt')['contents'], mb_internal_encoding(), 'UTF-8'));
+        $this->assertSame('new contents', $this->adapter->read('new_file.txt')['contents']);
+        
+        // Can't create file in a non-directory
+        $this->assertFalse($this->adapter->write('file.txt/new_file.txt', 'contents', new Config()));
+        
+        // Test regular UTF-8 handling with 100% valid data
         $result = $this->adapter->write('quickbrown.txt', $quickbrown, new Config());
         $this->assertSame($quickbrown, $result['contents']);
         $this->assertSame($quickbrown, $this->adapter->read('quickbrown.txt')['contents']);
-        $this->assertFalse($this->adapter->write('file.txt/new_file.txt', 'contents', new Config()));
+        
+        // Test edge case UTF-8 handling with mixed valid and invalid data
+        $result = $this->adapter->write('utf-8-test.txt', $utf_8_test, new Config());
+        $this->assertSame($utf_8_test, $result['contents']);
+        $this->assertSame($utf_8_test, $this->adapter->read('utf-8-test.txt')['contents']);
+        
+        // Test binary data handling
+        $result = $this->adapter->write('binary-test', $binary_test, new Config());
+        $this->assertSame($binary_test, $result['contents']);
+        $this->assertSame($binary_test, $this->adapter->read('binary-test')['contents']);
     }
 
     /**
@@ -184,9 +198,9 @@ class RedisAdapterTests extends \PHPUnit_Framework_TestCase
         $result = $this->adapter->listContents('', true);
         $this->assertSame(5, count($result));
         $this->assertSame('dir', $result[0]['path']);
-        $this->assertSame('dir/subdir', $result[1]['path']);
-        $this->assertSame('dir/subdir/file.txt', $result[2]['path']);
-        $this->assertSame('dir/file.txt', $result[3]['path']);
+        $this->assertSame('dir/file.txt', $result[1]['path']);
+        $this->assertSame('dir/subdir', $result[2]['path']);
+        $this->assertSame('dir/subdir/file.txt', $result[3]['path']);
         $this->assertSame('file.txt', $result[4]['path']);
 
         $result = $this->adapter->listContents('');
@@ -196,14 +210,14 @@ class RedisAdapterTests extends \PHPUnit_Framework_TestCase
 
         $result = $this->adapter->listContents('dir', true);
         $this->assertSame(3, count($result));
-        $this->assertSame('dir/subdir', $result[0]['path']);
-        $this->assertSame('dir/subdir/file.txt', $result[1]['path']);
-        $this->assertSame('dir/file.txt', $result[2]['path']);
+        $this->assertSame('dir/file.txt', $result[0]['path']);
+        $this->assertSame('dir/subdir', $result[1]['path']);
+        $this->assertSame('dir/subdir/file.txt', $result[2]['path']);
 
         $result = $this->adapter->listContents('dir');
         $this->assertSame(2, count($result));
-        $this->assertSame('dir/subdir', $result[0]['path']);
-        $this->assertSame('dir/file.txt', $result[1]['path']);
+        $this->assertSame('dir/file.txt', $result[0]['path']);
+        $this->assertSame('dir/subdir', $result[1]['path']);
 
         $this->assertSame([], $this->adapter->listContents('no_dir'));
     }
