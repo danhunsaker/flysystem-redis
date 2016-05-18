@@ -2,15 +2,15 @@
 namespace Danhunsaker\Flysystem\Redis;
 
 use League\Flysystem\Adapter\AbstractAdapter;
-use League\Flysystem\Adapter\Polyfill\StreamedTrait;
+use League\Flysystem\Adapter\Polyfill\StreamedTrait as StreamPolyfill;
 use League\Flysystem\Config;
 use League\Flysystem\Util;
 use Predis\Client;
 
 class RedisAdapter extends AbstractAdapter
 {
-    use StreamedTrait;
-    
+    use StreamPolyfill;
+
     /**
      * @type Predis\Client
      */
@@ -38,7 +38,7 @@ class RedisAdapter extends AbstractAdapter
     public function write($path, $contents, Config $config)
     {
         $info = $this->getPathInfo($path);
-        
+
         if ($this->ensurePathExists($info['dirname'], $config))
         {
             $fileData = [
@@ -48,7 +48,7 @@ class RedisAdapter extends AbstractAdapter
                 'visibility' => $config->get('visibility', 'public'),
                 'timestamp' => time(),
             ];
-            
+
             if (in_array($this->redis->hset($this->applyPathPrefix($info['dirname']), $info['basename'], json_encode($fileData)), [0, 1]))
             {
                 $fileData['contents'] = $contents;
@@ -71,7 +71,7 @@ class RedisAdapter extends AbstractAdapter
     public function has($path)
     {
         $info = $this->getPathInfo($path);
-        
+
         if ($this->redis->exists($this->applyPathPrefix($info['path'])))
         {
             // Is Directory...
@@ -87,7 +87,7 @@ class RedisAdapter extends AbstractAdapter
         {
             // Doesn't Exist...
             return false;
-        }        
+        }
     }
 
     /**
@@ -96,19 +96,19 @@ class RedisAdapter extends AbstractAdapter
     public function read($path)
     {
         $info = $this->getPathInfo($path);
-        
+
         if ( ! $this->has($path))
         {
             throw new \League\Flysystem\FileNotFoundException("File not found at path: {$info['path']}");
         }
-        
+
         $data = json_decode($this->redis->hget($this->applyPathPrefix($info['dirname']), $info['basename']), TRUE);
-        
+
         if ($data['type'] === 'file')
         {
             $data['contents'] = base64_decode($data['contents']);
             $data['size'] = Util::contentSize($data['contents']);
-            
+
             return $data;
         }
         else
@@ -123,14 +123,14 @@ class RedisAdapter extends AbstractAdapter
     public function getMetadata($path)
     {
         $info = $this->getPathInfo($path);
-        
+
         if ( ! $this->has($path))
         {
             throw new \League\Flysystem\FileNotFoundException("File not found at path: {$info['path']}");
         }
-        
+
         $metadata = json_decode($this->redis->hget($this->applyPathPrefix($info['dirname']), $info['basename']), TRUE);
-        
+
         if ($metadata['type'] === 'file')
         {
             $metadata['contents'] = base64_decode($metadata['contents']);
@@ -138,10 +138,10 @@ class RedisAdapter extends AbstractAdapter
                 'size' => Util::contentSize($metadata['contents']),
                 'mimetype' => Util::guessMimeType($metadata['path'], $metadata['contents']),
             ];
-            
+
             unset ($metadata['contents']);
         }
-        
+
         return $metadata;
     }
 
@@ -151,7 +151,7 @@ class RedisAdapter extends AbstractAdapter
     public function getSize($path)
     {
         $metadata = $this->getMetadata($path);
-        
+
         return isset($metadata['size']) ? Util::map($metadata, ['size' => 'size']) : false;
     }
 
@@ -161,7 +161,7 @@ class RedisAdapter extends AbstractAdapter
     public function getMimetype($path)
     {
         $metadata = $this->getMetadata($path);
-        
+
         return isset($metadata['mimetype']) ? Util::map($metadata, ['mimetype' => 'mimetype']) : ['mimetype' => 'directory'];
     }
 
@@ -171,7 +171,7 @@ class RedisAdapter extends AbstractAdapter
     public function getTimestamp($path)
     {
         $metadata = $this->getMetadata($path);
-        
+
         return isset($metadata['timestamp']) ? Util::map($metadata, ['timestamp' => 'timestamp']) : false;
     }
 
@@ -212,7 +212,7 @@ class RedisAdapter extends AbstractAdapter
     public function delete($path)
     {
         $info = $this->getPathInfo($path);
-        
+
         if ($this->has($info['path']) && $this->getMetadata($info['path'])['type'] === 'file')
         {
             return $this->redis->hdel($this->applyPathPrefix($info['dirname']), $info['basename']) > 0;
@@ -222,7 +222,7 @@ class RedisAdapter extends AbstractAdapter
             return false;
         }
     }
-    
+
     /**
      * {@inheritdoc}
      */
@@ -235,7 +235,7 @@ class RedisAdapter extends AbstractAdapter
             'visibility' => $config->get('visibility', 'public'),
             'timestamp' => time(),
         ];
-        
+
         if ( ! $this->has($info['path']))
         {
             if ( ! $this->ensurePathExists($info['dirname'], $config)
@@ -249,7 +249,7 @@ class RedisAdapter extends AbstractAdapter
         {
             $status = false;
         }
-        
+
         return $status;
     }
 
@@ -259,32 +259,32 @@ class RedisAdapter extends AbstractAdapter
     public function listContents($directory = '', $recursive = false)
     {
         $info = $this->getPathInfo($directory);
-        
+
         $result = [];
-        
+
         if ($this->has($info['path']) && $this->getMetadata($info['path'])['type'] === 'dir')
         {
             $files = $this->redis->hgetall($this->applyPathPrefix($info['path']));
             ksort($files);
-            
+
             foreach ($files as $name => $data)
             {
                 if ($name === '.')
                 {
                     continue;
                 }
-                
+
                 $data = json_decode($data, TRUE);
-                
+
                 $result[] = Util::map($data, ['type' => 'type', 'path' => 'path', 'timestamp' => 'timestamp', 'size' => 'size']);
-                
+
                 if ($recursive === TRUE && $data['type'] === 'dir')
                 {
                     $result = array_merge($result, $this->listContents($data['path'], TRUE));
                 }
             }
         }
-        
+
         return $result;
     }
 
@@ -294,11 +294,11 @@ class RedisAdapter extends AbstractAdapter
     public function deleteDir($dirname)
     {
         $info = $this->getPathInfo($dirname);
-        
+
         if ($this->has($info['path']) && $this->getMetadata($info['path'])['type'] === 'dir')
         {
             $status = TRUE;
-            
+
             foreach (array_reverse($this->listContents($info['path'], true)) as $file)
             {
                 if ($file['type'] === 'dir')
@@ -310,12 +310,12 @@ class RedisAdapter extends AbstractAdapter
                     $status = $status && $this->delete($file['path']);
                 }
             }
-            
+
             if ($info['path'] !== '/')
             {
                 $status = $status && ($this->redis->hdel($this->applyPathPrefix($info['dirname']), $info['basename']) > 0);
             }
-            
+
             return $status && ($this->redis->del($this->applyPathPrefix($info['path'])) > 0);
         }
         else
@@ -330,12 +330,12 @@ class RedisAdapter extends AbstractAdapter
     public function setVisibility($path, $visibility)
     {
         $info = $this->getPathInfo($path);
-        
+
         if ($this->has($info['path']))
         {
             $data = json_decode($this->redis->hget($this->applyPathPrefix($info['dirname']), $info['basename']), TRUE);
             $data['visibility'] = $visibility;
-            
+
             if (in_array($this->redis->hset($this->applyPathPrefix($info['dirname']), $info['basename'], json_encode($data)), [0, 1]))
             {
                 return $data;
@@ -350,17 +350,17 @@ class RedisAdapter extends AbstractAdapter
             return false;
         }
     }
-    
+
     /**
      * {@inheritdoc}
      */
     public function getVisibility($path)
     {
         $metadata = $this->getMetadata($path);
-        
+
         return isset($metadata['visibility']) ? Util::map($metadata, ['visibility' => 'visibility']) : ['visibility' => 'public'];
     }
-    
+
     protected function getPathInfo($path)
     {
         $info = Util::pathinfo('/' . Util::normalizePath($path));
@@ -370,10 +370,10 @@ class RedisAdapter extends AbstractAdapter
         {
             $info['basename'] = '.';
         }
-        
+
         return $info;
     }
-    
+
     protected function ensurePathExists($path, Config $config)
     {
         if ($this->has($path))
@@ -390,7 +390,7 @@ class RedisAdapter extends AbstractAdapter
         else
         {
             $info = $this->getPathInfo($path);
-            
+
             return is_array($this->createDir($info['path'], $config));
         }
     }
