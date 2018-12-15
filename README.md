@@ -1,6 +1,7 @@
 # Flysystem Adapter for Redis
 
 [![Join the chat at https://gitter.im/danhunsaker/flysystem-redis](https://badges.gitter.im/danhunsaker/flysystem-redis.svg)](https://gitter.im/danhunsaker/flysystem-redis?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Liberapay receiving](https://img.shields.io/liberapay/receives/danhunsaker.svg?style=flat-square)](https://liberapay.com/danhunsaker/)
 
 [![Latest Version](https://img.shields.io/github/release/danhunsaker/flysystem-redis.svg?style=flat-square)](https://github.com/danhunsaker/flysystem-redis/releases)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
